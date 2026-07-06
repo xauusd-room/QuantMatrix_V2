@@ -2,105 +2,59 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>QuantMatrix V2 - Live Trades</title>
+<title>EA Signal Test</title>
 
 <style>
-body {
-    font-family: Arial;
-    background: #0f172a;
-    color: #fff;
-    margin: 0;
-    padding: 20px;
+body{
+    background:#0f172a;
+    color:#fff;
+    font-family:Arial;
+    padding:20px;
 }
 
-h1 {
-    color: #38bdf8;
-}
-
-#trades {
-    margin-top: 20px;
-    display: grid;
-    gap: 10px;
-}
-
-.trade {
-    background: #1e293b;
-    padding: 12px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    border-left: 4px solid #38bdf8;
-}
-
-.buy {
-    border-left-color: #22c55e;
-}
-
-.sell {
-    border-left-color: #ef4444;
-}
-
-.small {
-    font-size: 12px;
-    color: #94a3b8;
+.card{
+    background:#1e293b;
+    padding:15px;
+    border-radius:10px;
+    margin-top:10px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📊 QuantMatrix V2 - Live Trades</h1>
+<h2>MT4 EA Signal Live</h2>
 
-<div id="status" class="small">Connecting...</div>
-
-<div id="trades"></div>
+<div id="signal">等待信号...</div>
 
 <script>
 
-const API = "https://yellow-violet-e1d0.aaa375750526.workers.dev/trades";
+async function loadSignal(){
 
-async function loadTrades() {
-    try {
-        const res = await fetch(API);
+    try{
+        const res = await fetch("https://yellow-violet-e1d0.aaa375750526.workers.dev/api/latest");
         const data = await res.json();
 
-        document.getElementById("status").innerText =
-            "Last update: " + new Date().toLocaleTimeString();
+        if(!data.symbol){
+            document.getElementById("signal").innerHTML = "暂无信号";
+            return;
+        }
 
-        renderTrades(data.trades || []);
-    } catch (err) {
-        document.getElementById("status").innerText =
-            "Connection error";
-        console.error(err);
+        document.getElementById("signal").innerHTML = `
+            <div class="card">
+                <div>品种：${data.symbol}</div>
+                <div>方向：${data.type}</div>
+                <div>价格：${data.price}</div>
+            </div>
+        `;
+
+    } catch(e){
+        document.getElementById("signal").innerHTML = "连接失败";
     }
 }
 
-function renderTrades(trades) {
-    const container = document.getElementById("trades");
-
-    if (trades.length === 0) {
-        container.innerHTML = "<div class='small'>No trades yet...</div>";
-        return;
-    }
-
-    container.innerHTML = trades.slice().reverse().map(t => `
-        <div class="trade ${t.type}">
-            <div>
-                <div><b>${t.symbol}</b></div>
-                <div class="small">${t.time}</div>
-            </div>
-
-            <div>
-                <div>${t.type.toUpperCase()}</div>
-                <div class="small">${t.price}</div>
-            </div>
-        </div>
-    `).join("");
-}
-
-// 自动刷新（每2秒）
-loadTrades();
-setInterval(loadTrades, 2000);
+setInterval(loadSignal, 2000);
+loadSignal();
 
 </script>
 
