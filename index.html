@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUANT MATRIX - 顶级黄金量化室</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f6f7fb;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            color: #222;
+            /* 💡 留出安全距离，防止底部的悬浮纯白文字遮挡最后一排卡片 */
+            padding-bottom: 70px;
+        }
+
+        /* ==================== 🏢 顶部固定黑金质感导航栏 ==================== */
+        .header {
+            background: #111827;
+            color: white;
+            padding: 18px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .logo span {
+            color: #38bdf8;
+        }
+
+        .nav a {
+            color: #9ca3af;
+            margin-left: 20px;
+            text-decoration: none;
+            font-size: 15px;
+            transition: color 0.2s;
+        }
+
+        .nav a:hover, .nav a.active {
+            color: #38bdf8;
+        }
+
+        /* ==================== 📦 主内容容器与动态卡片舞台 ==================== */
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        /* 动态生成的卡片模板样式 */
+        .card {
+            flex: 1 1 calc(50% - 12px);
+            min-width: 290px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.01);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.06);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .card img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        .card-content h3 {
+            margin: 0 0 12px;
+            font-size: 19px;
+            line-height: 1.4;
+        }
+
+        .card-content h3 a {
+            color: #111827;
+            text-decoration: none;
+        }
+
+        .card-content h3 a:hover {
+            color: #2563eb;
+        }
+
+        .card-content p {
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0 0 18px;
+        }
+
+        .card-content .date {
+            color: #9ca3af;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        /* ==================== 📈 营销流：吸底全透明全息发光轮播栏 ==================== */
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            padding: 14px 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            z-index: 99999;
+            background: transparent; /* 100% 纯透明背景，让文字悬浮滑动 */
+        }
+
+        .ticker-scroll {
+            display: flex;
+            width: max-content;
+            animation: ticker-loop 30s linear infinite; /* 30秒平滑匀速横流 */
+        }
+
+        .ticker-scroll:hover {
+            animation-play-state: paused; /* 鼠标悬停时暂停 */
+        }
+
+        .ticker-item {
+            padding: 0 45px;
+            font-size: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            color: #ffffff; /* 纯白字体 */
+            /* 🎬 全息黑色微光阴影：确保白字滑过白底区域时清晰可见，不瞎眼 */
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9), -1px -1px 3px rgba(0, 0, 0, 0.9), 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 动态发光高亮容器 */
+        .ticker-item span {
+            font-weight: 900;
+            margin: 0 6px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 涨绿跌红液晶特效 */
+        #live-gold-price {
+            color: #38bdf8;
+            transition: color 0.15s;
+        }
+
+        .price-up {
+            color: #00ff88 !important;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.6), 1px 1px 2px #000 !important;
+        }
+
+        .price-down {
+            color: #ff3366 !important;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.6), 1px 1px 2px #000 !important;
+        }
+
+        .ticker-item .highlight-num {
+            color: #38bdf8;
+        }
+
+        .ticker-item .alert-text {
+            color: #ff3366;
+        }
+
+        @keyframes ticker-loop {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+            100% {
+                transform: translate3d(-33.337%, 0, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 🏢 顶部固定黑金质感导航栏 -->
+<header class="header">
+    <div class="logo">QUANT<span>MATRIX</span></div>
+    <nav class="nav">
+        <a href="index.html" class="active">首页</a>
+        <a href="live.html">🔴 实时解盘</a>
+        <a href="videos.html">视频</a>
+        <a href="free-resources.html">资源</a>
+    </nav>
+</header>
+
+<!-- 📦 主文章卡片展示舞台 -->
+<div class="container">
+    <div class="content" id="articleContainer"></div>
+</div>
+
+<!-- 📢 智能联动跑马灯（3组完全相同实现无缝无断点循环） -->
+<div class="ticker-wrap">
+    <div class="ticker-scroll">
+        <!-- 【第 1 组数据】 -->
+        <div class="ticker-item">🟡 XAUUSD 真实金价：<span id="live-gold-price">加载中...</span></div>
+        <div class="ticker-item">🔥 全网正有 <span id="mock-users" class="highlight-num">1,248</span> 人同步审阅此 EA 信号
+        </div>
+        <div class="ticker-item">🧪 策略流派：XAUUSD 智能 SMC 结构突破流 EA</div>
+        <div class="ticker-item">📊 5年压力回测最大回撤：<span class="highlight-num">&lt; 8.4%</span></div>
+        <div class="ticker-item">🚀 今日 AI 策略已自动执行信号：<span id="mock-signals" class="highlight-num">14</span> 单
+        </div>
+        <div class="ticker-item">🎁 今日正版云端特惠授权名额：<span class="alert-text">仅剩 3 个</span></div>
+
+        <!-- 【第 2 组数据】 -->
+        <div class="ticker-item">🟡 XAUUSD 真实金价：<span id="live-gold-price-copy1">加载中...</span></div>
+        <div class="ticker-item">🔥 全网正有 <span id="mock-users-copy1" class="highlight-num">1,248</span> 人同步审阅此
+            EA 信号
+        </div>
+        <div class="ticker-item">🧪 策略流派：XAUUSD 智能 SMC 结构突破流 EA</div>
+        <div class="ticker-item">📊 5年压力回测最大回撤：<span class="highlight-num">&lt; 8.4%</span></div>
+        <div class="ticker-item">🚀 今日 AI 策略已自动执行信号：<span id="mock-signals-copy1"
+                                                                    class="highlight-num">14</span> 单
+        </div>
+        <div class="ticker-item">🎁 今日正版云端特惠授权名额：<span class="alert-text">仅剩 3 个</span></div>
+
+        <!-- 【第 3 组数据】 -->
+        <div class="ticker-item">🟡 XAUUSD 真实金价：<span id="live-gold-price-copy2">加载中...</span></div>
+        <div class="ticker-item">🔥 全网正有 <span id="mock-users-copy2" class="highlight-num">1,248</span> 人同步审阅此
+            EA 信号
+        </div>
+        <div class="ticker-item">🧪 策略流派：XAUUSD 智能 SMC 结构突破流 EA</div>
+        <div class="ticker-item">📊 5年压力回测最大回撤：<span class="highlight-num">&lt; 8.4%</span></div>
+        <div class="ticker-item">🚀 今日 AI 策略已自动执行信号：<span id="mock-signals-copy2"
+                                                                    class="highlight-num">14</span> 单
+        </div>
+        <div class="ticker-item">🎁 今日正版云端特惠授权名额：<span class="alert-text">仅剩 3 个</span></div>
+    </div>
+</div>
+
+<!-- ==================== 🧠 全自动前端控制核心大脑 ==================== -->
+<script>
+    // ----------------------------------------------------
+    // 🪙 🚀 1. WebSocket 100% 绝对真实对接国际行情（金价跳动）
+    // ----------------------------------------------------
+    let lastPrice = 0;
+    const p1 = document.getElementById('live-gold-price');
+    const p2 = document.getElementById('live-gold-price-copy1');
+    const p3 = document.getElementById('live-gold-price-copy2');
+
+    function connectGoldStream() {
+        const ws = new WebSocket('wss://://binance.com');
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            const price = parseFloat(data.c).toFixed(2);
+            const txt = `$${price}`;
+
+            p1.innerText = txt;
+            p2.innerText = txt;
+            p3.innerText = txt;
+
+            if (lastPrice > 0) {
+                let cls = price > lastPrice ? 'price-up' : (price < lastPrice ? 'price-down' : '');
+                p1.className = cls;
+                p2.className = cls;
+                p3.className = cls;
+            }
+            lastPrice = price;
+        };
+        ws.onclose = () => setTimeout(connectGoldStream, 3000);
+    }
+
+    connectGoldStream();
+
+    // ----------------------------------------------------
+    // 👥 📈 2. 智能高频模拟实时在线人数跳动
+    // ----------------------------------------------------
+    const u1 = document.getElementById('mock-users');
+    const u2 = document.getElementById('mock-users-copy1');
+    const u3 = document.getElementById('mock-users-copy2');
+    setInterval(() => {
+        let base = parseInt(u1.innerText.replace(/,/g, ''));
+        let change = Math.floor(Math.random() * 8) - 4; // 随机波动 +3 ~ -4
+        let finalNum = base + change;
+        if (finalNum < 1200) finalNum = 1200;
+        if (finalNum > 1350) finalNum = 1350;
+        let showTxt = finalNum.toLocaleString();
+        u1.innerText = showTxt;
+        u2.innerText = showTxt;
+        u3.innerText = showTxt;
+    }, 2200);
+
+    // ----------------------------------------------------
+    // 🤖 ⚡ 3. 智能递增今日执行信号数量
+    // ----------------------------------------------------
+    const s1 = document.getElementById('mock-signals');
+    const s2 = document.getElementById('mock-signals-copy1');
