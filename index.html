@@ -1,62 +1,297 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>EA Signal Test</title>
-
-<style>
-body{
-    background:#0f172a;
-    color:#fff;
-    font-family:Arial;
-    padding:20px;
-}
-
-.card{
-    background:#1e293b;
-    padding:15px;
-    border-radius:10px;
-    margin-top:10px;
-}
-</style>
-</head>
-
-<body>
-
-<h2>MT4 EA Signal Live</h2>
-
-<div id="signal">等待信号...</div>
-
-<script>
-
-async function loadSignal(){
-
-    try{
-        const res = await fetch("https://yellow-violet-e1d0.aaa375750526.workers.dev/api/latest");
-        const data = await res.json();
-
-        if(!data.symbol){
-            document.getElementById("signal").innerHTML = "暂无信号";
-            return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT4 EA 实盘交易实时看板</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --up-color: #22c55e; /* 盈利/多单 绿色 */
+            --down-color: #ef4444; /* 亏损/空单 红色 */
+            --border-color: #334155;
         }
 
-        document.getElementById("signal").innerHTML = `
-            <div class="card">
-                <div>品种：${data.symbol}</div>
-                <div>方向：${data.type}</div>
-                <div>价格：${data.price}</div>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background-color: #334155;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--up-color);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        /* 概览卡片 */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px 20px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .card-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* 表格样式 */
+        .table-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: #111827;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 14px;
+            padding: 14px 16px;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 15px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .badge-buy { background-color: rgba(34, 197, 94, 0.2); color: var(--up-color); }
+        .badge-sell { background-color: rgba(239, 68, 68, 0.2); color: var(--down-color); }
+
+        .text-up { color: var(--up-color); font-weight: 500; }
+        .text-down { color: var(--down-color); font-weight: 500; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>MT4 EA 当前持仓监控</h1>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span id="update-status">正在连接...</span>
             </div>
-        `;
+        </header>
 
-    } catch(e){
-        document.getElementById("signal").innerHTML = "连接失败";
-    }
-}
+        <!-- 账户简报看板 -->
+        <div class="summary-grid">
+            <div class="card">
+                <div class="card-title">当前总持仓</div>
+                <div class="card-value" id="total-orders">0 笔</div>
+            </div>
+            <div class="card">
+                <div class="card-title">总持仓手数</div>
+                <div class="card-value" id="total-lots">0.00 手</div>
+            </div>
+            <div class="card">
+                <div class="card-title">实时总盈亏</div>
+                <div class="card-value" id="total-profit">$0.00</div>
+            </div>
+        </div>
 
-setInterval(loadSignal, 2000);
-loadSignal();
+        <!-- 持仓明细表格 -->
+        <div class="table-container">
+            <table id="trades-table">
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>交易品种</th>
+                        <th>类型</th>
+                        <th>手数</th>
+                        <th>开仓价格</th>
+                        <th>单笔盈亏</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-body">
+                    <!-- 数据将由 JavaScript 动态注入 -->
+                </tbody>
+            </table>
+            <div id="empty-tips" class="empty-state" style="display: none;">
+                当前暂无在持订单，EA 正在观望盘面...
+            </div>
+        </div>
+    </div>
 
-</script>
+    <script>
+        // 🛠️【请在此处替换】将下面的域名换成你 Cloudflare Worker 的真实访问域名
+        const WORKER_API = "https://yellow-violet-e1d0.aaa375750526.workers.dev";
 
+        const updateStatus = document.getElementById("update-status");
+        const tradesBody = document.getElementById("trades-body");
+        const emptyTips = document.getElementById("empty-tips");
+        const totalOrdersEl = document.getElementById("total-orders");
+        const totalLotsEl = document.getElementById("total-lots");
+        const totalProfitEl = document.getElementById("total-profit");
+
+        async function fetchTrades() {
+            try {
+                const response = await fetch(WORKER_API);
+                if (!response.ok) throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+
+                const trades = await response.json(); // 此时拿到的是干净的数组对象
+
+                renderTable(trades);
+
+                // 更新同步成功状态
+                const now = new Date();
+                updateStatus.textContent = `实时同步中 (${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')})`;
+            } catch (error) {
+                console.error("抓取订单失败:", error);
+                updateStatus.textContent = "连接失败，正在重试...";
+            }
+        }
+
+        function renderTable(trades) {
+            // 清空旧数据
+            tradesBody.innerHTML = "";
+
+            // 如果没有持仓订单
+            if (!trades || trades.length === 0) {
+                emptyTips.style.display = "block";
+                totalOrdersEl.textContent = "0 笔";
+                totalLotsEl.textContent = "0.00 手";
+                totalProfitEl.textContent = "$0.00";
+                totalProfitEl.className = "card-value";
+                return;
+            }
+
+            emptyTips.style.display = "none";
+
+            let totalLots = 0;
+            let totalProfit = 0;
+
+            // 循环遍历持仓并生成表格行
+            trades.forEach(order => {
+                totalLots += order.lots;
+                totalProfit += order.profit;
+
+                const row = document.createElement("tr");
+
+                // 区分多空样式
+                const typeBadge = order.type === "BUY" ? '<span class="badge badge-buy">BUY</span>' : '<span class="badge badge-sell">SELL</span>';
+
+                // 区分单笔盈亏颜色
+                const profitClass = order.profit >= 0 ? "text-up" : "text-down";
+                const profitSign = order.profit >= 0 ? "+" : "";
+
+                row.innerHTML = `
+                    <td>#${order.ticket}</td>
+                    <td style="font-weight: 600;">${order.symbol}</td>
+                    <td>${typeBadge}</td>
+                    <td>${order.lots.toFixed(2)} 手</td>
+                    <td>${order.price}</td>
+                    <td class="${profitClass}">${profitSign}$${order.profit.toFixed(2)}</td>
+                `;
+                tradesBody.appendChild(row);
+            });
+
+            // 更新顶部看板数据
+            totalOrdersEl.textContent = `${trades.length} 笔`;
+            totalLotsEl.textContent = `${totalLots.toFixed(2)} 手`;
+
+            // 更新总盈亏颜色
+            totalProfitEl.textContent = (totalProfit >= 0 ? "+" : "") + `$${totalProfit.toFixed(2)}`;
+            if (totalProfit > 0) {
+                totalProfitEl.className = "card-value text-up";
+            } else if (totalProfit < 0) {
+                totalProfitEl.className = "card-value text-down";
+            } else {
+                totalProfitEl.className = "card-value";
+            }
+        }
+
+        // 首次打开网页时立即拉取数据
+        fetchTrades();
+
+        // 设定定时器：每隔 3000 毫秒（3秒）自动拉取一次最新持仓
+        setInterval(fetchTrades, 3000);
+    </script>
 </body>
 </html>
